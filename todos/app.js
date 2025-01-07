@@ -8,7 +8,8 @@
 // 7. Get all completed todos (done)
 // 8. Get all uncompleted todos (done)
 // 9. Get todo by Id (done)
-
+const path = require('path')
+const fs = require('fs').promises;
 const express = require('express');
 
 const PORT = 3000;
@@ -16,30 +17,52 @@ const PORT = 3000;
 const app = express();
 app.use(express.json()) // Body parser
 
-// Todo -> id, title, note, completed
-let todos = [
-    { id: 1, title: "Buy groceries", note: "Milk, Bread, Eggs, and Fruits", completed: false },
-    { id: 2, title: "Buy React Native", note: "Focus on Expo and navigation", completed: false },
-    { id: 3, title: "Call plumber", note: "Fix the kitchen sink", completed: true },
-    { id: 4, title: "Prepare for meeting", note: "Create slides and summary", completed: false },
-    { id: 5, title: "Go for a run", note: "Morning run for 30 minutes", completed: true },
-    { id: 6, title: "Read a book", note: "Finish 'Atomic Habits' by James Clear", completed: false },
-    { id: 7, title: "Water the plants", note: "Don’t forget the indoor plants", completed: false },
-    { id: 8, title: "Plan weekend trip", note: "Look into nearby hiking spots", completed: true },
-    { id: 9, title: "Clean the garage", note: "Organize tools and dispose of old items", completed: false },
-    { id: 10, title: "Write blog post", note: "Topic: 'Benefits of Serverless Architecture'", completed: true }
-];
+const filePath = path.join(__dirname, 'todo.json')
 
-app.get('/todos', (req, res) => {
-    const { completed } = req.query;
-    const isCompleted = completed === 'true'
+const readTodos = async () => {
+    try {
+        const jsonString = await fs.readFile(filePath, 'utf-8')
+
+        return JSON.parse(jsonString)
+    } catch (error) {
+        console.error("Error reading file")
+        return []
+    }
+}
+
+const writeTodos = async (todos) => {
+    try {
+        await fs.writeFile(filePath, JSON.stringify(todos, null, 2))
+        return []
+    } catch (error) {
+        console.error("Error writing todos file: ", error)
+    }
+}
+
+app.get('/todos', async (req, res) => {
+    const { completed, title } = req.query;
+    const todos = await readTodos()
+    let filteredTodos = todos;
+
+    if (completed !== undefined) {
+        const isCompleted = completed === 'true';
+        filteredTodos = filteredTodos.filter(t => t.completed === isCompleted);
+    }
+
+    if (title) {
+        const lowerTitle = title.toLowerCase();
+        filteredTodos = filteredTodos.filter(t =>
+            t.title.toLowerCase().includes(lowerTitle)
+        );
+    }
     res.send({
-        todos: todos.filter(t => t.completed === isCompleted)
+        todos: filteredTodos
     })
 })
 
-app.get("/todos/:id", (req, res) => {
+app.get("/todos/:id", async (req, res) => {
     const { id } = req.params;
+    const todos = await readTodos()
     const todo = todos.find((currrentTodo) => currrentTodo.id === Number(id))
     if (!todo) {
         return res.status(404).json({ message: "Todo not found" })
@@ -49,38 +72,43 @@ app.get("/todos/:id", (req, res) => {
 })
 
 
-app.post('/todos', (req, res) => {
+app.post('/todos', async (req, res) => {
     const { title, note } = req.body;
     if (!title) {
         return res.status(400).send({ message: "Title cannot be empty" })
     }
+    const todos = await readTodos()
     const newTodo = { id: Date.now(), title, note, completed: false };
-
     todos.push(newTodo);
+    
+    await writeTodos(todos)
 
     res.status(201).json({ message: "Todo Created", todo: newTodo })
 })
 
-app.put("/todos/:id", (req, res) => {
+app.put("/todos/:id", async (req, res) => {
     const { id } = req.params;
     const { completed } = req.body;
+    const todos = await readTodos()
     const todo = todos.find((currrentTodo) => currrentTodo.id === Number(id)) // if it matches the condition it returns the matched element else undefined
 
     if (!todo) {
         return res.status(404).json({ message: "Todo not found" })
     }
     todo.completed = completed
+    await writeTodos(todos)
     res.json({ message: "Todo status updated", todo })
 })
 
-app.delete("/todos/:id", (req, res) => {
+app.delete("/todos/:id", async (req, res) => {
     const { id } = req.params;
+    const todos = await readTodos()
     const todo = todos.find((currrentTodo) => currrentTodo.id === Number(id))
     if (!todo) {
         return res.status(404).json({ message: "Todo not found" })
     }
     todos = todos.filter(t => t.id !== todo.id)
-
+    await writeTodos(todos)
     res.json({ message: `Todo with id ${todo.id} successfully deleted` })
 })
 
