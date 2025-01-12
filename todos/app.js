@@ -8,67 +8,58 @@
 // 7. Get all completed todos (done)
 // 8. Get all uncompleted todos (done)
 // 9. Get todo by Id (done)
-const path = require('path')
-const fs = require('fs').promises;
+
 const express = require('express');
+const database = require('./db/database');
 
 const PORT = 3000;
 
 const app = express();
 app.use(express.json()) // Body parser
 
-const filePath = path.join(__dirname, 'todo.json')
-
-const readTodos = async () => {
-    try {
-        const jsonString = await fs.readFile(filePath, 'utf-8')
-
-        return JSON.parse(jsonString)
-    } catch (error) {
-        console.error("Error reading file")
-        return []
-    }
-}
-
-const writeTodos = async (todos) => {
-    try {
-        await fs.writeFile(filePath, JSON.stringify(todos, null, 2))
-        return []
-    } catch (error) {
-        console.error("Error writing todos file: ", error)
-    }
-}
-
 app.get('/todos', async (req, res) => {
     const { completed, title } = req.query;
-    const todos = await readTodos()
-    let filteredTodos = todos;
+    try {
+        let { data: todos, error } = await database
+            .from('todo')
+            .select('*')
 
-    if (completed !== undefined) {
-        const isCompleted = completed === 'true';
-        filteredTodos = filteredTodos.filter(t => t.completed === isCompleted);
-    }
+        if (error) {
+            return res.status(500).json({ message: "Failed to create todo", error: error.message });
+        }
 
-    if (title) {
-        const lowerTitle = title.toLowerCase();
-        filteredTodos = filteredTodos.filter(t =>
-            t.title.toLowerCase().includes(lowerTitle)
-        );
+        let filteredTodos = todos;
+
+        if (completed !== undefined) {
+            const isCompleted = completed === 'true';
+            filteredTodos = filteredTodos.filter(t => t.completed === isCompleted);
+        }
+
+        if (title) {
+            const lowerTitle = title.toLowerCase();
+            filteredTodos = filteredTodos.filter(t =>
+                t.title.toLowerCase().includes(lowerTitle)
+            );
+        }
+        res.send({
+            todos: filteredTodos
+        })
+    } catch (error) {
+        res.status(500).json({ message: "An unexpected error occurred", error: err.message });
     }
-    res.send({
-        todos: filteredTodos
-    })
 })
 
 app.get("/todos/:id", async (req, res) => {
-    const { id } = req.params;
-    const todos = await readTodos()
-    const todo = todos.find((currrentTodo) => currrentTodo.id === Number(id))
-    if (!todo) {
-        return res.status(404).json({ message: "Todo not found" })
+    try {
+        const { id } = req.params;
+        const { data: todo, error } = await database.from('todo').select('*').eq('id', id).maybeSingle()
+        if (error) {
+            return res.status(500).json({ message: `Failed to retrieve todo with id ${id}`, error: error.message });
+        }
+        res.json({ message: "Todo fetched", todo })
+    } catch (error) {
+        res.status(500).json({ message: "An unexpected error occurred", error: error.message });
     }
-
-    res.json({ message: "Todo fetched", todo })
 })
 
 
@@ -77,39 +68,62 @@ app.post('/todos', async (req, res) => {
     if (!title) {
         return res.status(400).send({ message: "Title cannot be empty" })
     }
-    const todos = await readTodos()
-    const newTodo = { id: Date.now(), title, note, completed: false };
-    todos.push(newTodo);
-    
-    await writeTodos(todos)
 
-    res.status(201).json({ message: "Todo Created", todo: newTodo })
+    try {
+        const { data, error } = await database.from('todo').insert([{ title, note }]).select();
+
+        if (error) {
+            return res.status(500).json({ message: "Failed to create todo", error: error.message });
+        }
+
+        res.status(201).json({ message: "Todo Created", todo: data });
+    } catch (error) {
+        res.status(500).json({ message: "An unexpected error occurred", error: error.message });
+    }
 })
 
 app.put("/todos/:id", async (req, res) => {
-    const { id } = req.params;
-    const { completed } = req.body;
-    const todos = await readTodos()
-    const todo = todos.find((currrentTodo) => currrentTodo.id === Number(id)) // if it matches the condition it returns the matched element else undefined
+    try {
+        const { id } = req.params;
+        const { completed } = req.body;
 
-    if (!todo) {
-        return res.status(404).json({ message: "Todo not found" })
+        const { data: todo, error } = await database
+            .from('todo')
+            .update({ completed })
+            .eq('id', id)
+            .select().maybeSingle();
+
+        if (error) {
+            return res.status(500).json({ message: `Failed to update todo with id: ${id}`, error: error.message });
+        }
+        res.json({ message: "Todo status updated", todo })
+    } catch (error) {
+        res.status(500).json({ message: "An unexpected error occurred", error: error.message });
     }
-    todo.completed = completed
-    await writeTodos(todos)
-    res.json({ message: "Todo status updated", todo })
 })
 
 app.delete("/todos/:id", async (req, res) => {
-    const { id } = req.params;
-    const todos = await readTodos()
-    const todo = todos.find((currrentTodo) => currrentTodo.id === Number(id))
-    if (!todo) {
-        return res.status(404).json({ message: "Todo not found" })
+    try {
+        const { id } = req.params;
+        const { data, error } = await database
+            .from('todo')
+            .delete()
+            .eq('id', id)
+            .select()
+            .maybeSingle()
+        if (error) {
+            return res.status(500).json({ message: `Failed to del todo with id: ${id}`, error: error.message });
+        }
+
+        if (!data) {
+            return res.status(404).json({ message: `No todo found with id: ${id}` });
+        }
+
+        res.status(204).json({ message: `Todo with id ${id} successfully deleted` })
     }
-    todos = todos.filter(t => t.id !== todo.id)
-    await writeTodos(todos)
-    res.json({ message: `Todo with id ${todo.id} successfully deleted` })
+    catch (error) {
+        res.status(500).json({ message: "An unexpected error occurred", error: error.message });
+    }
 })
 
 app.listen(PORT, () => {
