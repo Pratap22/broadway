@@ -1,62 +1,58 @@
-const database = require('../db/database');
 const Todo = require('../models/todo');
 
 const getTodos = async (title, completed) => {
-
     try {
+        const query = {};
+        if (title) query.title = { $regex: title, $options: 'i' };
+        if (completed !== undefined) query.completed = completed;
 
-        const todos = await Todo.find();
-
+        const todos = await Todo.find(query);
         return { todos };
-
     } catch (error) {
         return { todos: null, error };
     }
-}
+};
 
 const getTodoById = async (id) => {
-    const { data: todo, error } = await database
-        .from('todo')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle()
-
-    return { todo, error }
-}
+    try {
+        const todo = await Todo.findById(id);
+        return { todo, error: null };
+    } catch (error) {
+        return { todo: null, error };
+    }
+};
 
 const createTodo = async (todoData) => {
     try {
-
-        const todo = await Todo.create(todoData);
-
-        return { todo }
-
+        const todo = new Todo(todoData);
+        await todo.save();
+        return { todo };
     } catch (error) {
-        return { error }
+        return { todo: null, error };
     }
-}
+};
 
 const updateTodo = async (id, completed) => {
-    const { data: todo, error } = await database
-        .from('todo')
-        .update({ completed })
-        .eq('id', id)
-        .select()
-        .single();
-
-    return { todo, error }
-}
+    try {
+        const todo = await Todo.findByIdAndUpdate(
+            id,
+            { completed },
+            { new: true }
+        );
+        return { todo, error: null };
+    } catch (error) {
+        return { todo: null, error };
+    }
+};
 
 const deleteTodoById = async (id) => {
-    const { data, error } = await database
-        .from('todo')
-        .delete()
-        .eq('id', id)
-        .select()
-        .single();
-
-    return { data, error }
-}
+    try {
+        const todo = await Todo.findByIdAndDelete(id);
+        return { data: todo, error: null };
+    } catch (error) {
+        return { data: null, error };
+    }
+};
 
 module.exports = {
     getTodos,
@@ -64,4 +60,4 @@ module.exports = {
     createTodo,
     updateTodo,
     deleteTodoById
-}
+};

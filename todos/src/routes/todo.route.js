@@ -1,15 +1,14 @@
 const express = require('express');
-const database = require('../db/database');
-const todoController = require("../controllers/todo.contoller")
+const todoController = require("../controllers/todo.contoller");
+const { isLoggedIn } = require('../middlewares/jwt');
 
 const todoRoutes = express.Router();
 
-
-todoRoutes.get('/', todoController.getTodos)
+todoRoutes.get('/', isLoggedIn, todoController.getTodos)
 
 todoRoutes.get("/:id", todoController.getTodoById)
 
-todoRoutes.post('/', todoController.createTodo)
+todoRoutes.post('/', isLoggedIn, todoController.createTodo)
 
 todoRoutes.put("/:id", todoController.updateTodoById)
 
