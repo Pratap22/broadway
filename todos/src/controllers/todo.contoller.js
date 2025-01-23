@@ -70,6 +70,7 @@ const updateTodoById = async (req, res) => {
 
 const deleteTodoById = async (req, res) => {
     try {
+        throw Error("Error Aayo")
         const { id } = req.params;
         const { data, error } = await todoService.deleteTodoById(id);
 
