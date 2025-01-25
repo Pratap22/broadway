@@ -9,7 +9,7 @@ const PORT = 3000;
 
 const app = express();
 app.use(cookieParser())
-app.use(express.json())
+app.use(express.json()) //Bodyparser
 app.use(morgan.successHandler);
 app.use(morgan.errorHandler);
 
