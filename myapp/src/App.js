@@ -1,27 +1,29 @@
-import { useState } from "react"
+import React, { useEffect, useState } from "react";
+import Timer from "./Timer";
+import TimerF from "./TimerF";
 
 // props -> property of a component
 const Name = (props) => {
-  return <div>My name is {props.name}</div>
-}
-
+  return <div>My name is {props.name}</div>;
+};
 
 const Age = ({ age }) => {
-  return <div>I am {age} years old</div>
-}
-
+  return <div>I am {age} years old</div>;
+};
 
 const Occupation = ({ occupation }) => {
-  return <div>I am a {occupation}</div>
-}
+  return <div>I am a {occupation}</div>;
+};
 
 const Card = (props) => {
-  return <div className="bg-slate-500 my-2">
-    <Name name={props.name} />
-    <Age age={props.age} />
-    <Occupation occupation={props.occupation} />
-  </div>
-}
+  return (
+    <div className="bg-slate-500 my-2">
+      <Name name={props.name} />
+      <Age age={props.age} />
+      <Occupation occupation={props.occupation} />
+    </div>
+  );
+};
 
 // Benefits
 // 1. Re-useable
@@ -43,7 +45,7 @@ const occupations = [
   "Veterinarian",
   "Photographer",
   "Fashion Designer",
-  "Writer"
+  "Writer",
 ];
 
 const students = [
@@ -98,31 +100,67 @@ const students = [
   { name: "Bharat", age: 20, occupation: "Artist" },
   { name: "Sonali", age: 20, occupation: "Nurse" },
   { name: "Nishant", age: 20, occupation: "Scientist" },
-  { name: "Madhuri", age: 20, occupation: "Teacher" }
+  { name: "Madhuri", age: 20, occupation: "Teacher" },
 ];
 
+class StateClass extends React.Component {
+  constructor() {
+    super()
+    this.state = {
+      selectedOccupation: "All"
+    }
+  }
+
+  setSelectedOccupation = (value) => {
+    this.setState({ selectedOccupation: value })
+  }
+  render() {
+    const { selectedOccupation } = this.state;
+    return <div className="bg-gradient-to-r from-cyan-500 to-blue-500 py-2">
+      <button></button>
+      <div className="flex justify-between">
+        <p>Students</p>{" "}
+        <div>
+          <select
+            value={selectedOccupation}
+            onChange={(event) => this.setSelectedOccupation(event.target.value)}
+          >
+            {occupations.map((occ, index) => (
+              <option key={index} value={occ}>
+                {occ}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {students
+        .filter((student) => {
+          if (selectedOccupation === "All") {
+            return true;
+          } else {
+            return selectedOccupation === student.occupation;
+          }
+        })
+        .map((student, index) => (
+          <Card
+            key={index}
+            name={student.name}
+            age={student.age}
+            occupation={student.occupation}
+          />
+        ))}
+    </div>
+  }
+}
 
 function App() {
   // 1st element (selectedOccupation) -> current value of the state
   // 2nd element (setSelectedOccupation) -> a function to update the value of the state
-  const [selectedOccupation, setSelectedOccupation] = useState("All") // React hooks to maintain state or data
+  const [selectedOccupation, setSelectedOccupation] = useState("All"); // React hooks to maintain state or data
+  // useEffect()
 
   return (
-    <div className="bg-gradient-to-r from-cyan-500 to-blue-500 py-2">
-      <button></button>
-      <div className="flex justify-between"><p>Students</p> <div>
-        <select value={selectedOccupation} onChange={(event) => setSelectedOccupation(event.target.value)}>
-          {occupations.map((occ, index) => <option key={index} value={occ}>{occ}</option>)}
-        </select>
-      </div></div>
-      {students.filter(student => {
-        if (selectedOccupation === "All") {
-          return true
-        } else {
-          return selectedOccupation === student.occupation
-        }
-      }).map((student, index) => <Card key={index} name={student.name} age={student.age} occupation={student.occupation} />)}
-    </div>
+    <TimerF />
   );
 }
 
