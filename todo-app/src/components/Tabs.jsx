@@ -1,5 +1,5 @@
 const Tabs = ({ tabs = [], selectedKey, onSelectTab }) => {
-  const style = `w-1/${tabs.length} text-center border-b-4 cursor-pointer`;
+  const style = `w-1/${tabs.length} text-center border-b-4 cursor-pointer bg-light-bg`;
   return (
     <div className="flex">
       {tabs.map((tab, index) => (
