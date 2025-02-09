@@ -14,7 +14,7 @@ class App extends React.Component {
         title: "",
         completed: false,
       },
-      todos: [{ title: 1, completed: false, _id: 1 }],
+      todos: [],
     };
   }
 
